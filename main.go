@@ -59,6 +59,9 @@ func fromAddress(t reflect.Type, addr uintptr) reflect.Value {
 
 func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value, step int) {
 	switch t.Kind() {
+	case reflect.Bool:
+		v = reflect.ValueOf(params[pidx] & 0xFF == 1)
+		step = 1
 	case reflect.Int8:
 	case reflect.Int16:
 	case reflect.Int32:
@@ -72,6 +75,7 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 	case reflect.Uint16:
 	case reflect.Uint32:
 	case reflect.Uint64:
+	case reflect.Uintptr:
 		v = reflect.New(t).Elem()
 		v.SetUint(uint64(params[pidx]))
 		step = 1
@@ -81,6 +85,12 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 	case reflect.Float64:
 		v = reflect.ValueOf(math.Float64frombits(uint64(params[pidx])))
 		step = 1
+	case reflect.Complex64:
+		v = fromAddress(t, params[pidx])
+		step = 1
+	case reflect.Complex128:
+		v = fromAddress(t, params[pidx])
+		step = 2
 	case reflect.Array:
 		v = fromAddress(t, params[pidx])
 		step = 1
@@ -90,6 +100,9 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 		svp := reflect.NewAt(data, unsafe.Pointer(params[pidx]))
 		v = svp.Elem()
 		step = 3
+	case reflect.Func:
+		v = fromAddress(t, params[pidx])
+		step = 1
 	case reflect.String:
 		v = fromAddress(t, params[pidx])
 		step = 2
@@ -177,8 +190,16 @@ func Test4(a [3]byte, t testStruct) {
 	PrintInputs(Test4)
 }
 
-func Test5(c1 chan byte, c2 <-chan byte) {
+func Test5(t bool, c1 chan byte, c2 <-chan byte) {
 	PrintInputs(Test5)
+}
+
+func Test6(c1 complex64, c2 complex128) {
+	PrintInputs(Test6)
+}
+
+func Test7(f func(i int) bool) {
+	PrintInputs(Test7)
 }
 
 type testStruct struct {
@@ -198,5 +219,9 @@ func main() {
 	Test2(3.14, s)
 	Test3(42)
 	Test4(a, testStruct{1, []byte{'f', 'o'}})
-	Test5(c1,c2)
+	Test5(true,c1,c2)
+	Test6(1+2i, 2+1i)
+	Test7(func(i int) (bool) { return true })
+
+	fmt.Println("END")
 }
