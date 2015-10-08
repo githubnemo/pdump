@@ -1,5 +1,29 @@
 package pdump
 
+// Dump and access input/output parameter values of surrounding functions.
+//
+// Example usage:
+//
+// Code:
+//
+// 	import "github.com/githubnemo/pdump"
+//
+// 	func Test3(in int) (int, int) {
+// 		pdump.PrintInputs(Test3)
+// 		defer pdump.PrintOutputs(Test3)
+// 		return 3, 4
+// 	}
+//
+// 	func main() {
+// 		Test3(42)
+// 	}
+//
+// Output:
+//
+// 	main.Test3(42)
+// 	3,4, = main.Test3()
+//
+
 import (
 	"fmt"
 	"math"
@@ -180,6 +204,9 @@ func outputParameterValues(fn interface{}, stack []byte) (string, []reflect.Valu
 	return name, pparams
 }
 
+// Returns the input parameters of the function surrounding the call to this
+// function as reflection values. It expects the function as a parameter to
+// have type information about the input parameters.
 func Inputs(fn interface{}) []reflect.Value {
 	v := reflect.ValueOf(fn)
 
@@ -194,6 +221,7 @@ func Inputs(fn interface{}) []reflect.Value {
 	return params
 }
 
+// Analog of Inputs to output (return) values.
 func Outputs(fn interface{}) []reflect.Value {
 	v := reflect.ValueOf(fn)
 
@@ -208,6 +236,8 @@ func Outputs(fn interface{}) []reflect.Value {
 	return params
 }
 
+// Prints the input parameter values of the surrounding function in a human
+// readable format.
 func PrintInputs(fn interface{}) {
 	v := reflect.ValueOf(fn)
 
@@ -232,6 +262,9 @@ func PrintInputs(fn interface{}) {
 	fmt.Println(")")
 }
 
+// Prints the output parameter values of the surrounding function in a human
+// readable format. Note that this will only work if the call to this function
+// is deferred.
 func PrintOutputs(fn interface{}) {
 	v := reflect.ValueOf(fn)
 
