@@ -283,3 +283,36 @@ func PrintOutputs(fn interface{}) {
 
 	fmt.Printf(" = %s()\n", name)
 }
+
+// Combines in- and output parameter printing so that the resulting output
+// will contain the return values as well as the input parameters.
+//
+// Example output: 1, 4.15 = main.Foo(1+2i, 4.12)
+//
+func PrintInOutputs(fn interface{}) {
+	v := reflect.ValueOf(fn)
+
+	if v.Kind() != reflect.Func {
+		return
+	}
+
+	b := make([]byte, 500)
+	runtime.Stack(b, false)
+
+	name, iparams := inputParameterValues(fn, b)
+	_, oparams := outputParameterValues(fn, b)
+
+	for _, v := range oparams {
+		fmt.Printf("%#v,", v)
+	}
+
+	fmt.Printf(" = %s(", name)
+	for i, v := range iparams {
+		if i != 0 {
+			fmt.Print(",")
+		}
+		fmt.Printf("%#v", v)
+	}
+
+	fmt.Println(")")
+}

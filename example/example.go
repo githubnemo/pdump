@@ -17,6 +17,7 @@ func Test2(in float64, s string) {
 func Test3(in int) (int, int) {
 	pdump.PrintInputs(Test3)
 	defer pdump.PrintOutputs(Test3)
+	defer pdump.PrintInOutputs(Test3)
 	return 3, 4
 }
 
