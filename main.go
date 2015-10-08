@@ -81,6 +81,9 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 	case reflect.Float64:
 		v = reflect.ValueOf(math.Float64frombits(uint64(params[pidx])))
 		step = 1
+	case reflect.Array:
+		v = fromAddress(t, params[pidx])
+		step = 1
 	case reflect.Slice:
 		// create []T pointing to slice content
 		data := reflect.ArrayOf(int(params[pidx+2]), t.Elem())
@@ -104,6 +107,9 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 		z := params[pidx : pidx+os]
 		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
 		step = os
+	case reflect.Chan:
+		v = fromAddress(t, params[pidx])
+		step = 1
 	}
 	return
 }
@@ -167,8 +173,12 @@ func Test3(in int) (int, int) {
 	return 3, 4
 }
 
-func Test4(t testStruct) {
+func Test4(a [3]byte, t testStruct) {
 	PrintInputs(Test4)
+}
+
+func Test5(c1 chan byte, c2 <-chan byte) {
+	PrintInputs(Test5)
 }
 
 type testStruct struct {
@@ -181,8 +191,12 @@ func main() {
 	m := map[string]int{"foo": 3, "bar": 7}
 	m["bar"] += 2
 	s := "AAAA"
+	a := [3]byte{'a','b','c'}
+	c1 := make(chan byte)
+	c2 := make(<-chan byte)
 	Test1(2, b, 9, m)
 	Test2(3.14, s)
 	Test3(42)
-	Test4(testStruct{1, []byte{'f', 'o'}})
+	Test4(a, testStruct{1, []byte{'f', 'o'}})
+	Test5(c1,c2)
 }
