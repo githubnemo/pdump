@@ -12,8 +12,7 @@ Code:
 	import "github.com/githubnemo/pdump"
 
 	func Test3(in int) (int, int) {
-		pdump.PrintInputs(Test3)
-		defer pdump.PrintOutputs(Test3)
+		defer pdump.PrintInOutputs(Test3)
 		return 3, 4
 	}
 
@@ -23,8 +22,7 @@ Code:
 
 Output:
 
-	main.Test3(42)
-	3,4, = main.Test3()
+	3,4, = main.Test3(42)
 
 
 ### Requirements
