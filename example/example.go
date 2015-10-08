@@ -1,41 +1,43 @@
 package main
 
 import (
+	"fmt"
 	"github.com/githubnemo/pdump"
+	"unsafe"
 )
 
 func Test1(in int, b []byte, in2 int, m map[string]int) {
-	PrintInputs(Test1)
+	pdump.PrintInputs(Test1)
 }
 
 func Test2(in float64, s string) {
-	PrintInputs(Test2)
+	pdump.PrintInputs(Test2)
 }
 
 func Test3(in int) (int, int) {
-	PrintInputs(Test3)
-	defer PrintOutputs(Test3)
+	pdump.PrintInputs(Test3)
+	defer pdump.PrintOutputs(Test3)
 	return 3, 4
 }
 
 func Test4(a [3]byte, t testStruct) {
-	PrintInputs(Test4)
+	pdump.PrintInputs(Test4)
 }
 
 func Test5(t bool, c1 chan byte, c2 <-chan byte) {
-	PrintInputs(Test5)
+	pdump.PrintInputs(Test5)
 }
 
 func Test6(c1 complex64, c2 complex128) {
-	PrintInputs(Test6)
+	pdump.PrintInputs(Test6)
 }
 
 func Test7(f func(i int) bool) {
-	PrintInputs(Test7)
+	pdump.PrintInputs(Test7)
 }
 
 func Test8(a interface{}, p *[]byte, up unsafe.Pointer) {
-	PrintInputs(Test8)
+	pdump.PrintInputs(Test8)
 }
 
 type testStruct struct {
