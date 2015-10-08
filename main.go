@@ -59,10 +59,21 @@ func fromAddress(t reflect.Type, addr uintptr) reflect.Value {
 
 func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value, step int) {
 	switch t.Kind() {
+	case reflect.Int8:
+	case reflect.Int16:
+	case reflect.Int32:
 	case reflect.Int64:
 	case reflect.Int:
-		// Just use the value from the stack
-		v = reflect.ValueOf(params[pidx])
+		v = reflect.New(t).Elem()
+		v.SetInt(int64(params[pidx]))
+		step = 1
+	case reflect.Uint:
+	case reflect.Uint8:
+	case reflect.Uint16:
+	case reflect.Uint32:
+	case reflect.Uint64:
+		v = reflect.New(t).Elem()
+		v.SetUint(uint64(params[pidx]))
 		step = 1
 	case reflect.Float32:
 		v = reflect.ValueOf(math.Float32frombits(uint32(params[pidx])))
@@ -83,6 +94,16 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 		// points to hmap struct
 		v = fromAddress(t, params[pidx])
 		step = 1
+	case reflect.Struct:
+		// Determine overall step count over all fields
+		os := 0
+		for i := 0; i < t.NumField(); i++ {
+			_, s := parameterValue(t.Field(i).Type, params, pidx+os)
+			os += s
+		}
+		z := params[pidx : pidx+os]
+		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
+		step = os
 	}
 	return
 }
@@ -129,7 +150,7 @@ func PrintOutputs(fn interface{}) {
 		pidx += step
 		fmt.Print(v, ",")
 	}
-	fmt.Print(" = ", name, "()")
+	fmt.Println(" = ", name, "()")
 }
 
 func Test1(in int, b []byte, in2 int, m map[string]int) {
@@ -146,6 +167,15 @@ func Test3(in int) (int, int) {
 	return 3, 4
 }
 
+func Test4(t testStruct) {
+	PrintInputs(Test4)
+}
+
+type testStruct struct {
+	t int
+	b []byte
+}
+
 func main() {
 	b := []byte{'A', 'B', 'C'}
 	m := map[string]int{"foo": 3, "bar": 7}
@@ -154,4 +184,5 @@ func main() {
 	Test1(2, b, 9, m)
 	Test2(3.14, s)
 	Test3(42)
+	Test4(testStruct{1, []byte{'f', 'o'}})
 }
