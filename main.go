@@ -95,12 +95,17 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 		v = fromAddress(t, params[pidx])
 		step = 1
 	case reflect.Slice:
-		// create []T pointing to slice content
-		data := reflect.ArrayOf(int(params[pidx+2]), t.Elem())
-		svp := reflect.NewAt(data, unsafe.Pointer(params[pidx]))
-		v = svp.Elem()
+		z := params[pidx:pidx+2]
+		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
 		step = 3
 	case reflect.Func:
+		v = fromAddress(t, params[pidx])
+		step = 1
+	case reflect.Interface:
+		z := params[pidx:pidx+1]
+		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
+		step = 2
+	case reflect.Ptr:
 		v = fromAddress(t, params[pidx])
 		step = 1
 	case reflect.String:
@@ -121,6 +126,9 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
 		step = os
 	case reflect.Chan:
+		v = fromAddress(t, params[pidx])
+		step = 1
+	case reflect.UnsafePointer:
 		v = fromAddress(t, params[pidx])
 		step = 1
 	}
@@ -145,7 +153,7 @@ func PrintInputs(fn interface{}) {
 	for i := 0; i < vt.NumIn(); i++ {
 		v, step := parameterValue(vt.In(i), params, pidx)
 		pidx += step
-		fmt.Print(v, ",")
+		fmt.Printf("%#v,",v)
 	}
 	fmt.Println(")")
 }
@@ -167,7 +175,7 @@ func PrintOutputs(fn interface{}) {
 	for i := 0; i < vt.NumOut(); i++ {
 		v, step := parameterValue(vt.Out(i), params, pidx)
 		pidx += step
-		fmt.Print(v, ",")
+		fmt.Printf("%#v,", v)
 	}
 	fmt.Println(" = ", name, "()")
 }
@@ -202,6 +210,10 @@ func Test7(f func(i int) bool) {
 	PrintInputs(Test7)
 }
 
+func Test8(a interface{}, p *[]byte, up unsafe.Pointer) {
+	PrintInputs(Test8)
+}
+
 type testStruct struct {
 	t int
 	b []byte
@@ -215,6 +227,8 @@ func main() {
 	a := [3]byte{'a','b','c'}
 	c1 := make(chan byte)
 	c2 := make(<-chan byte)
+	p := &b
+	up := unsafe.Pointer(p)
 	Test1(2, b, 9, m)
 	Test2(3.14, s)
 	Test3(42)
@@ -222,6 +236,7 @@ func main() {
 	Test5(true,c1,c2)
 	Test6(1+2i, 2+1i)
 	Test7(func(i int) (bool) { return true })
+	Test8(interface{}(2), p, up)
 
 	fmt.Println("END")
 }
