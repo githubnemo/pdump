@@ -1,4 +1,4 @@
-package main
+package pdump
 
 import (
 	"fmt"
@@ -15,8 +15,12 @@ import (
 // goroutine 1 [running]:
 // main.printInputs(0x4c4c60, 0x539038)
 //	/.../go/src/debug/main.go:16 +0xe0
-// main.Test1(0x2)
+// main.Test1(0x2)                       <---- parsed
 //	/.../go/src/debug/main.go:23
+//
+//	Returns the function name and the parameter values, e.g.:
+//
+//		("main.Test1", [0x2])
 //
 func parseParams(st string) (string, []uintptr) {
 
@@ -60,7 +64,7 @@ func fromAddress(t reflect.Type, addr uintptr) reflect.Value {
 func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value, step int) {
 	switch t.Kind() {
 	case reflect.Bool:
-		v = reflect.ValueOf(params[pidx] & 0xFF == 1)
+		v = reflect.ValueOf(params[pidx]&0xFF == 1)
 		step = 1
 	case reflect.Int8:
 	case reflect.Int16:
@@ -95,14 +99,14 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 		v = fromAddress(t, params[pidx])
 		step = 1
 	case reflect.Slice:
-		z := params[pidx:pidx+2]
+		z := params[pidx : pidx+2]
 		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
 		step = 3
 	case reflect.Func:
 		v = fromAddress(t, params[pidx])
 		step = 1
 	case reflect.Interface:
-		z := params[pidx:pidx+1]
+		z := params[pidx : pidx+1]
 		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
 		step = 2
 	case reflect.Ptr:
@@ -135,108 +139,114 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 	return
 }
 
-func PrintInputs(fn interface{}) {
+func inputParameterValues(fn interface{}, stack []byte) (string, []reflect.Value) {
 	v := reflect.ValueOf(fn)
 	vt := v.Type()
+
+	if v.Kind() != reflect.Func {
+		return "", nil
+	}
+
+	name, params := parseParams(string(stack))
+	pidx := 0
+	pparams := make([]reflect.Value, vt.NumIn())
+
+	for i := 0; i < vt.NumIn(); i++ {
+		v, step := parameterValue(vt.In(i), params, pidx)
+		pidx += step
+		pparams[i] = v
+	}
+
+	return name, pparams
+}
+
+func outputParameterValues(fn interface{}, stack []byte) (string, []reflect.Value) {
+	v := reflect.ValueOf(fn)
+	vt := v.Type()
+
+	if v.Kind() != reflect.Func {
+		return "", nil
+	}
+
+	name, params := parseParams(string(stack))
+	pidx := vt.NumIn()
+	pparams := make([]reflect.Value, vt.NumOut())
+
+	for i := 0; i < vt.NumOut(); i++ {
+		v, step := parameterValue(vt.Out(i), params, pidx)
+		pidx += step
+		pparams[i] = v
+	}
+	return name, pparams
+}
+
+func Inputs(fn interface{}) []reflect.Value {
+	v := reflect.ValueOf(fn)
+
+	if v.Kind() != reflect.Func {
+		return nil
+	}
+
 	b := make([]byte, 500)
+	runtime.Stack(b, false)
+
+	_, params := inputParameterValues(fn, b)
+	return params
+}
+
+func Outputs(fn interface{}) []reflect.Value {
+	v := reflect.ValueOf(fn)
+
+	if v.Kind() != reflect.Func {
+		return nil
+	}
+
+	b := make([]byte, 500)
+	runtime.Stack(b, false)
+
+	_, params := outputParameterValues(fn, b)
+	return params
+}
+
+func PrintInputs(fn interface{}) {
+	v := reflect.ValueOf(fn)
 
 	if v.Kind() != reflect.Func {
 		return
 	}
 
+	b := make([]byte, 500)
 	runtime.Stack(b, false)
 
-	name, params := parseParams(string(b))
-	pidx := 0
+	name, params := inputParameterValues(fn, b)
 
-	fmt.Print(name + "(")
-	for i := 0; i < vt.NumIn(); i++ {
-		v, step := parameterValue(vt.In(i), params, pidx)
-		pidx += step
-		fmt.Printf("%#v,",v)
+	fmt.Print(name, "(")
+
+	for i, v := range params {
+		if i != 0 {
+			fmt.Print(",")
+		}
+		fmt.Printf("%#v", v)
 	}
+
 	fmt.Println(")")
 }
 
 func PrintOutputs(fn interface{}) {
 	v := reflect.ValueOf(fn)
-	vt := v.Type()
-	b := make([]byte, 500)
 
 	if v.Kind() != reflect.Func {
 		return
 	}
 
+	b := make([]byte, 500)
 	runtime.Stack(b, false)
 
-	name, params := parseParams(string(b))
-	pidx := vt.NumIn()
+	name, params := outputParameterValues(fn, b)
 
-	for i := 0; i < vt.NumOut(); i++ {
-		v, step := parameterValue(vt.Out(i), params, pidx)
-		pidx += step
+	for _, v := range params {
 		fmt.Printf("%#v,", v)
 	}
-	fmt.Println(" = ", name, "()")
-}
 
-func Test1(in int, b []byte, in2 int, m map[string]int) {
-	PrintInputs(Test1)
-}
-
-func Test2(in float64, s string) {
-	PrintInputs(Test2)
-}
-
-func Test3(in int) (int, int) {
-	PrintInputs(Test3)
-	defer PrintOutputs(Test3)
-	return 3, 4
-}
-
-func Test4(a [3]byte, t testStruct) {
-	PrintInputs(Test4)
-}
-
-func Test5(t bool, c1 chan byte, c2 <-chan byte) {
-	PrintInputs(Test5)
-}
-
-func Test6(c1 complex64, c2 complex128) {
-	PrintInputs(Test6)
-}
-
-func Test7(f func(i int) bool) {
-	PrintInputs(Test7)
-}
-
-func Test8(a interface{}, p *[]byte, up unsafe.Pointer) {
-	PrintInputs(Test8)
-}
-
-type testStruct struct {
-	t int
-	b []byte
-}
-
-func main() {
-	b := []byte{'A', 'B', 'C'}
-	m := map[string]int{"foo": 3, "bar": 7}
-	m["bar"] += 2
-	s := "AAAA"
-	a := [3]byte{'a','b','c'}
-	c1 := make(chan byte)
-	c2 := make(<-chan byte)
-	p := &b
-	up := unsafe.Pointer(p)
-	Test1(2, b, 9, m)
-	Test2(3.14, s)
-	Test3(42)
-	Test4(a, testStruct{1, []byte{'f', 'o'}})
-	Test5(true,c1,c2)
-	Test6(1+2i, 2+1i)
-	Test7(func(i int) (bool) { return true })
-	Test8(interface{}(2), p, up)
-
-	fmt.Println("END")
+	fmt.Printf(" = %s()\n", name)
 }
