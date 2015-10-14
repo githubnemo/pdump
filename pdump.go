@@ -137,7 +137,8 @@ func parameterValue(t reflect.Type, params []uintptr, pidx int) (v reflect.Value
 		v = fromAddress(t, params[pidx])
 		step = 1
 	case reflect.String:
-		v = fromAddress(t, params[pidx])
+		z := params[pidx : pidx+2]
+		v = reflect.NewAt(t, unsafe.Pointer(&z[0])).Elem()
 		step = 2
 	case reflect.Map:
 		// points to hmap struct
