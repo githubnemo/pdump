@@ -34,6 +34,10 @@ import (
 	"unsafe"
 )
 
+// Buffer size to store the stack dump in. It has to hold at least
+// 4 lines of stack trace.
+const stackBufferSize = 500
+
 // Parses the second call's parameters in a stack trace of the form:
 //
 // goroutine 1 [running]:
@@ -215,7 +219,7 @@ func Inputs(fn interface{}) []reflect.Value {
 		return nil
 	}
 
-	b := make([]byte, 500)
+	b := make([]byte, stackBufferSize)
 	runtime.Stack(b, false)
 
 	_, params := inputParameterValues(fn, b)
@@ -230,7 +234,7 @@ func Outputs(fn interface{}) []reflect.Value {
 		return nil
 	}
 
-	b := make([]byte, 500)
+	b := make([]byte, stackBufferSize)
 	runtime.Stack(b, false)
 
 	_, params := outputParameterValues(fn, b)
@@ -246,7 +250,7 @@ func PrintInputs(fn interface{}) {
 		return
 	}
 
-	b := make([]byte, 500)
+	b := make([]byte, stackBufferSize)
 	runtime.Stack(b, false)
 
 	name, params := inputParameterValues(fn, b)
@@ -273,7 +277,7 @@ func PrintOutputs(fn interface{}) {
 		return
 	}
 
-	b := make([]byte, 500)
+	b := make([]byte, stackBufferSize)
 	runtime.Stack(b, false)
 
 	name, params := outputParameterValues(fn, b)
@@ -297,7 +301,7 @@ func PrintInOutputs(fn interface{}) {
 		return
 	}
 
-	b := make([]byte, 500)
+	b := make([]byte, stackBufferSize)
 	runtime.Stack(b, false)
 
 	name, iparams := inputParameterValues(fn, b)
